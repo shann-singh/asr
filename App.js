@@ -28,7 +28,7 @@ const App = () => {
   AudioRecord.init(options);
 
   useEffect(() => {
-    if (client.current !== '' && speech === false) {
+    if (client.current !== '') {
       client.current.on('data', async (data) => {
         console.log(data);
         let d = await data.toString('utf8');
@@ -96,14 +96,15 @@ const App = () => {
   //     });
   // };
 
-  AudioRecord.on('data', (data) => {
-    setTimeout(() => {
-      RNFetchBlob.fs
+  AudioRecord.on('data', async (data) => {
+    setTimeout(async () => {
+      setSpeech(true);
+      await RNFetchBlob.fs
         .exists(RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm')
-        .then((exist) => {
+        .then(async (exist) => {
           console.log(`file ${exist ? '' : 'not'} exists`);
 
-          RNFetchBlob.fs
+          await RNFetchBlob.fs
             .readStream(
               RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm',
               'base64',
