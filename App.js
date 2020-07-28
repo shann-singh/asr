@@ -7,6 +7,7 @@ import {Player, Recorder} from '@react-native-community/audio-toolkit';
 import RNSoundLevel from 'react-native-sound-level';
 import RNFetchBlob from 'rn-fetch-blob';
 import AudioRecord from 'react-native-audio-record';
+import {Buffer} from 'buffer';
 
 const App = () => {
   const [speech, setSpeech] = useState(false);
@@ -27,28 +28,28 @@ const App = () => {
 
   AudioRecord.init(options);
 
-  useEffect(() => {
-    if (client.current !== '') {
-      client.current.on('data', async (data) => {
-        console.log(data);
-        let d = await data.toString('utf8');
-        console.log(d);
-        if (prevTextRef.current !== d && d !== ' ') {
-          textRef.current = prevTextRef.current + d;
-          prevTextRef.current = d;
-          setText(text + ' ' + d);
-          if (d.search('stop') !== -1) {
-            stopRecord();
-          }
-        } else {
-          setSpeech(true);
-        }
-      });
-      return () => {
-        setSpeech(true);
-      };
-    }
-  }, [speech, text]);
+  // useEffect(() => {
+  //   if (client.current !== '') {
+  //     client.current.on('data', async (data) => {
+  //       console.log(data);
+  //       let d = await data.toString('utf8');
+  //       console.log(d);
+  //       if (prevTextRef.current !== d && d !== ' ') {
+  //         textRef.current = prevTextRef.current + d;
+  //         prevTextRef.current = d;
+  //         setText(text + ' ' + d);
+  //         if (d.search('stop') !== -1) {
+  //           stopRecord();
+  //         }
+  //       } else {
+  //         setSpeech(true);
+  //       }
+  //     });
+  //     return () => {
+  //       setSpeech(true);
+  //     };
+  //   }
+  // }, [speech, text]);
 
   const recordAudio = () => {
     setSpeech(true);
@@ -112,17 +113,10 @@ const App = () => {
               180,
             )
             .then((stream) => {
-              let i = 0;
               stream.open();
               stream.onData(async (chunk) => {
-                i += 1;
-                console.log(chunk);
-                await client.current.write(chunk, 'base64', () => {});
-                if (i === 10) {
-                  await client.current.on('data', async (dataa) => {
-                    console.log(dataa);
-                  });
-                }
+                console.log(data);
+                await client.current.write(chunk, 'base64');
               });
               stream.onEnd(() => {
                 setSpeech(false);
