@@ -3,9 +3,10 @@ import {StyleSheet, Button, Platform, View, Text} from 'react-native';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import TcpSocket from 'react-native-tcp-socket';
 import {RNFFmpeg, RNFFmpegConfig} from 'react-native-ffmpeg';
-import {Recorder} from '@react-native-community/audio-toolkit';
+import {Player, Recorder} from '@react-native-community/audio-toolkit';
 import RNSoundLevel from 'react-native-sound-level';
 import RNFetchBlob from 'rn-fetch-blob';
+import AudioRecord from 'react-native-audio-record';
 
 const App = () => {
   const [speech, setSpeech] = useState(false);
@@ -16,9 +17,20 @@ const App = () => {
 
   RNFFmpegConfig.disableLogs();
 
+  const options = {
+    sampleRate: 8000, // default 44100
+    channels: 1, // 1 or 2, default 1
+    bitsPerSample: 16, // 8 or 16, default 16
+    audioSource: 6, // android only (see below)
+    wavFile: 'test.wav', // default 'audio.wav'
+  };
+
+  AudioRecord.init(options);
+
   useEffect(() => {
     if (client.current !== '' && speech === false) {
       client.current.on('data', async (data) => {
+        console.log(data);
         let d = await data.toString('utf8');
         console.log(d);
         if (prevTextRef.current !== d && d !== ' ') {
@@ -40,59 +52,85 @@ const App = () => {
 
   const recordAudio = () => {
     setSpeech(true);
-    let recc = new Recorder('filename.m4a').record();
-
-    setTimeout(async () => {
-      await stopAudioRecord(recc);
-    }, 5000);
+    AudioRecord.start();
+    // console.log('starting');
+    // AudioRecord.start();
+    // setTimeout(async () => {
+    //   setSpeech(true);
+    //   AudioRecord.stop();
+    //   setTimeout(() => {
+    //     stopAudioRecord();
+    //   }, 2000);
+    // }, 5000);
   };
 
-  const stopAudioRecord = async (recc) => {
-    await recc.stop(async () => {
-      if (client.current) {
-        await RNFFmpeg.executeWithArguments([
-          '-y',
-          '-i',
-          RNFetchBlob.fs.dirs.DocumentDir + '/filename.m4a',
-          '-acodec',
-          'pcm_s16le',
-          '-ac',
-          '1',
-          '-ar',
-          '8000',
-          RNFetchBlob.fs.dirs.DocumentDir + '/filename.wav',
-        ])
-          .then(async (result) => {
-            await RNFetchBlob.fs
-              .exists(RNFetchBlob.fs.dirs.DocumentDir + '/filename.wav')
-              .then(async (exist) => {
-                console.log(`file ${exist ? '' : 'not'} exists`);
-                await RNFetchBlob.fs
-                  .readStream(
-                    RNFetchBlob.fs.dirs.DocumentDir + '/filename.wav',
-                    'base64',
-                    1440,
-                    10,
-                  )
-                  .then((stream) => {
-                    stream.open();
-                    stream.onData((chunk) => {
-                      client.current.write(chunk, 'base64', () => {});
-                    });
-                  })
-                  .catch((error) => {
-                    console.log(error);
+  // const stopAudioRecord = async () => {
+  //   // if (client.current) {
+
+  //   RNFetchBlob.fs
+  //     .exists(RNFetchBlob.fs.dirs.DocumentDir + '/test.wav')
+  //     .then(async (exist) => {
+  //       console.log(`file ${exist ? '' : 'not'} exists`);
+  //       // new Player('test.wav').play();
+
+  //       await RNFetchBlob.fs
+  //         .readStream(
+  //           RNFetchBlob.fs.dirs.DocumentDir + '/test.wav',
+  //           'base64',
+  //           1440,
+  //           10,
+  //         )
+  //         .then((stream) => {
+  //           stream.open();
+  //           stream.onData((chunk) => {
+  //             client.current.write(chunk, 'base64', () => {});
+  //           });
+  //           stream.onEnd(() => {
+  //             setSpeech(false);
+  //             recordAudio();
+  //           });
+  //         })
+  //         .catch((error) => {
+  //           console.log(error);
+  //         });
+  //     });
+  // };
+
+  AudioRecord.on('data', (data) => {
+    setTimeout(() => {
+      RNFetchBlob.fs
+        .exists(RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm')
+        .then((exist) => {
+          console.log(`file ${exist ? '' : 'not'} exists`);
+
+          RNFetchBlob.fs
+            .readStream(
+              RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm',
+              'base64',
+              1440,
+              180,
+            )
+            .then((stream) => {
+              let i = 0;
+              stream.open();
+              stream.onData(async (chunk) => {
+                i += 1;
+                console.log(chunk);
+                await client.current.write(chunk, 'base64', () => {});
+                if (i === 10) {
+                  await client.current.on('data', async (dataa) => {
+                    console.log(dataa);
                   });
+                }
               });
-          })
-          .catch((error) => {
-            console.log(error);
-          });
-        setSpeech(false);
-        recordAudio();
-      }
-    });
-  };
+              stream.onEnd(() => {
+                setSpeech(false);
+                // recordAudio();
+              });
+            });
+        });
+    }, 180);
+  });
 
   const startRecord = async () => {
     if (client.current === '') {
@@ -106,18 +144,23 @@ const App = () => {
       await client.current.on('error', (error) => {
         console.log(error);
       });
-      recordAudio();
     }
+    recordAudio();
   };
 
   const stopRecord = () => {
     if (client.current !== '') {
-      client.current.on('close', () => {
-        console.log('Connection closed!');
-      });
-      client.current.destroy();
-      client.current = '';
-      console.log('stop');
+      AudioRecord.stop();
+      console.log('stoping');
+      setSpeech(false);
+
+      setTimeout(() => {
+        client.current.on('close', () => {
+          console.log('Connection closed!');
+        });
+        client.current.destroy();
+        client.current = '';
+      }, 5000);
     }
   };
 

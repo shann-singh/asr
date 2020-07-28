@@ -13,6 +13,7 @@
     "@react-native-community/audio-toolkit": "^2.0.3",
     "react": "16.13.1",
     "react-native": "0.63.2",
+    "react-native-audio-record": "^0.2.2",
     "react-native-ffmpeg": "^0.4.4",
     "react-native-permissions": "^2.1.5",
     "react-native-sound-level": "^1.1.5",
