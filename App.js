@@ -28,7 +28,7 @@ const App = () => {
   AudioRecord.init(options);
 
   useEffect(() => {
-    if (client.current !== '' && speech === false) {
+    if (client.current !== '') {
       client.current.on('data', async (data) => {
         console.log(data);
         let d = await data.toString('utf8');
@@ -52,85 +52,56 @@ const App = () => {
 
   const recordAudio = () => {
     setSpeech(true);
+
+    console.log('starting');
     AudioRecord.start();
-    // console.log('starting');
-    // AudioRecord.start();
-    // setTimeout(async () => {
-    //   setSpeech(true);
-    //   AudioRecord.stop();
-    //   setTimeout(() => {
-    //     stopAudioRecord();
-    //   }, 2000);
-    // }, 5000);
+
+    setTimeout(async () => {
+      AudioRecord.stop();
+      setTimeout(() => {
+        stopAudioRecord();
+      }, 2000);
+    }, 5000);
   };
 
-  // const stopAudioRecord = async () => {
-  //   // if (client.current) {
-
-  //   RNFetchBlob.fs
-  //     .exists(RNFetchBlob.fs.dirs.DocumentDir + '/test.wav')
-  //     .then(async (exist) => {
-  //       console.log(`file ${exist ? '' : 'not'} exists`);
-  //       // new Player('test.wav').play();
-
-  //       await RNFetchBlob.fs
-  //         .readStream(
-  //           RNFetchBlob.fs.dirs.DocumentDir + '/test.wav',
-  //           'base64',
-  //           1440,
-  //           10,
-  //         )
-  //         .then((stream) => {
-  //           stream.open();
-  //           stream.onData((chunk) => {
-  //             client.current.write(chunk, 'base64', () => {});
-  //           });
-  //           stream.onEnd(() => {
-  //             setSpeech(false);
-  //             recordAudio();
-  //           });
-  //         })
-  //         .catch((error) => {
-  //           console.log(error);
-  //         });
-  //     });
-  // };
-
-  AudioRecord.on('data', (data) => {
-    setTimeout(() => {
-      RNFetchBlob.fs
+  const stopAudioRecord = async () => {
+    if (client.current) {
+      await RNFetchBlob.fs
         .exists(RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm')
         .then((exist) => {
           console.log(`file ${exist ? '' : 'not'} exists`);
-
+          // new Player('test.wav').play();
           RNFetchBlob.fs
             .readStream(
               RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm',
               'base64',
               1440,
-              180,
+              10,
             )
             .then((stream) => {
-              let i = 0;
               stream.open();
               stream.onData(async (chunk) => {
-                i += 1;
                 console.log(chunk);
                 await client.current.write(chunk, 'base64', () => {});
-                if (i === 10) {
-                  await client.current.on('data', async (dataa) => {
-                    console.log(dataa);
-                  });
+              });
+              stream.onEnd(async () => {
+                // await client.current.on('data', async (data) => {
+                //   console.log(data);
+                //   let d = await data.toString('utf8');
+                //   console.log(d);
+                // });
+                if (client.current) {
+                  setSpeech(false);
+                  recordAudio();
                 }
               });
-              stream.onEnd(() => {
-                setSpeech(false);
-                // recordAudio();
-              });
+            })
+            .catch((error) => {
+              console.log(error);
             });
         });
-    }, 180);
-  });
+    }
+  };
 
   const startRecord = async () => {
     if (client.current === '') {
@@ -150,17 +121,13 @@ const App = () => {
 
   const stopRecord = () => {
     if (client.current !== '') {
-      AudioRecord.stop();
       console.log('stoping');
-      setSpeech(false);
-
-      setTimeout(() => {
-        client.current.on('close', () => {
-          console.log('Connection closed!');
-        });
-        client.current.destroy();
-        client.current = '';
-      }, 5000);
+      AudioRecord.stop();
+      client.current.on('close', () => {
+        console.log('Connection closed!');
+      });
+      client.current.destroy();
+      client.current = '';
     }
   };
 
