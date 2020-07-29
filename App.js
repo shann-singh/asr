@@ -28,9 +28,8 @@ const App = () => {
   AudioRecord.init(options);
 
   useEffect(() => {
-    if (client.current !== '') {
+    if (client.current !== '' && speech === false) {
       client.current.on('data', async (data) => {
-        console.log(data);
         let d = await data.toString('utf8');
         console.log(d);
         if (prevTextRef.current !== d && d !== ' ') {
@@ -60,7 +59,7 @@ const App = () => {
       AudioRecord.stop();
       setTimeout(() => {
         stopAudioRecord();
-      }, 2000);
+      }, 1000);
     }, 5000);
   };
 
@@ -85,11 +84,6 @@ const App = () => {
                 await client.current.write(chunk, 'base64', () => {});
               });
               stream.onEnd(async () => {
-                // await client.current.on('data', async (data) => {
-                //   console.log(data);
-                //   let d = await data.toString('utf8');
-                //   console.log(d);
-                // });
                 if (client.current) {
                   setSpeech(false);
                   recordAudio();
