@@ -23,28 +23,28 @@ const App = () => {
 
   AudioRecord.init(options);
 
-  useEffect(() => {
-    if (client.current !== '') {
-      client.current.on('data', async (data) => {
-        console.log(data);
-        let d = await data.toString('utf8');
-        console.log(d);
-        if (prevTextRef.current !== d && d !== ' ') {
-          textRef.current = prevTextRef.current + d;
-          prevTextRef.current = d;
-          setText(text + ' ' + d);
-          if (d.search('stop') !== -1) {
-            stopRecord();
-          }
-        } else {
-          setSpeech(true);
-        }
-      });
-      return () => {
-        setSpeech(true);
-      };
-    }
-  }, [speech, text]);
+  // useEffect(() => {
+  //   if (client.current !== '') {
+  //     client.current.on('data', async (data) => {
+  //       console.log(data);
+  //       let d = await data.toString('utf8');
+  //       console.log(d);
+  //       if (prevTextRef.current !== d && d !== ' ') {
+  //         textRef.current = prevTextRef.current + d;
+  //         prevTextRef.current = d;
+  //         setText(text + ' ' + d);
+  //         if (d.search('stop') !== -1) {
+  //           stopRecord();
+  //         }
+  //       } else {
+  //         setSpeech(true);
+  //       }
+  //     });
+  //     return () => {
+  //       setSpeech(true);
+  //     };
+  //   }
+  // }, [speech, text]);
 
   const recordAudio = () => {
     setSpeech(true);
