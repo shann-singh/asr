@@ -1,16 +1,23 @@
 import React, {useState, useEffect, useRef} from 'react';
-import {StyleSheet, Button, Platform, View, Text} from 'react-native';
+import {
+  StyleSheet,
+  Button,
+  Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import TcpSocket from 'react-native-tcp-socket';
-import {Player, Recorder} from '@react-native-community/audio-toolkit';
 import RNFetchBlob from 'rn-fetch-blob';
 import AudioRecord from 'react-native-audio-record';
-import {Buffer} from 'buffer';
 
 const App = () => {
   const [speech, setSpeech] = useState(false);
   const [text, setText] = useState('');
   const client = useRef('');
+  const prevTextRef = useRef();
   const textRef = useRef('');
 
   const options = {
@@ -23,104 +30,72 @@ const App = () => {
 
   AudioRecord.init(options);
 
-  // useEffect(() => {
-  //   if (client.current !== '') {
-  //     client.current.on('data', async (data) => {
-  //       console.log(data);
-  //       let d = await data.toString('utf8');
-  //       console.log(d);
-  //       if (prevTextRef.current !== d && d !== ' ') {
-  //         textRef.current = prevTextRef.current + d;
-  //         prevTextRef.current = d;
-  //         setText(text + ' ' + d);
-  //         if (d.search('stop') !== -1) {
-  //           stopRecord();
-  //         }
-  //       } else {
-  //         setSpeech(true);
-  //       }
-  //     });
-  //     return () => {
-  //       setSpeech(true);
-  //     };
-  //   }
-  // }, [speech, text]);
+  useEffect(() => {
+    if (client.current !== '' && speech === false) {
+      client.current.on('data', async (data) => {
+        let d = await data.toString('utf8');
+        console.log(d);
+        if (prevTextRef.current !== d && d !== ' ') {
+          textRef.current = textRef.current + d;
+          prevTextRef.current = d;
+          setText(text + ' ' + d);
+          if (d.search('stop') !== -1) {
+            textRef.current = textRef.current + 'STOP';
+            stopRecord();
+          }
+        }
+      });
+    }
+  }, [speech, text]);
 
   const recordAudio = () => {
     setSpeech(true);
     AudioRecord.start();
-    // console.log('starting');
-    // AudioRecord.start();
-    // setTimeout(async () => {
-    //   setSpeech(true);
-    //   AudioRecord.stop();
-    //   setTimeout(() => {
-    //     stopAudioRecord();
-    //   }, 2000);
-    // }, 5000);
+
+    setTimeout(async () => {
+      AudioRecord.stop();
+      setTimeout(() => {
+        stopAudioRecord();
+      }, 2000);
+    }, 5000);
   };
 
-  // const stopAudioRecord = async () => {
-  //   // if (client.current) {
-
-  //   RNFetchBlob.fs
-  //     .exists(RNFetchBlob.fs.dirs.DocumentDir + '/test.wav')
-  //     .then(async (exist) => {
-  //       console.log(`file ${exist ? '' : 'not'} exists`);
-  //       // new Player('test.wav').play();
-
-  //       await RNFetchBlob.fs
-  //         .readStream(
-  //           RNFetchBlob.fs.dirs.DocumentDir + '/test.wav',
-  //           'base64',
-  //           1440,
-  //           10,
-  //         )
-  //         .then((stream) => {
-  //           stream.open();
-  //           stream.onData((chunk) => {
-  //             client.current.write(chunk, 'base64', () => {});
-  //           });
-  //           stream.onEnd(() => {
-  //             setSpeech(false);
-  //             recordAudio();
-  //           });
-  //         })
-  //         .catch((error) => {
-  //           console.log(error);
-  //         });
-  //     });
-  // };
-
-  AudioRecord.on('data', async (data) => {
-    setTimeout(async () => {
-      setSpeech(true);
+  const stopAudioRecord = async () => {
+    if (client.current) {
       await RNFetchBlob.fs
-        .exists(RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm')
+        .exists(RNFetchBlob.fs.dirs.DocumentDir + '/test.wav')
         .then(async (exist) => {
           console.log(`file ${exist ? '' : 'not'} exists`);
-
+          // new Player('test.wav').play();
           await RNFetchBlob.fs
             .readStream(
-              RNFetchBlob.fs.dirs.DocumentDir + '/temp.pcm',
+              RNFetchBlob.fs.dirs.DocumentDir + '/test.wav',
               'base64',
               1440,
-              180,
+              10,
             )
             .then((stream) => {
               stream.open();
               stream.onData(async (chunk) => {
-                console.log(data);
-                await client.current.write(chunk, 'base64');
+                console.log(chunk);
+                await client.current.write(chunk, 'base64', () => {});
               });
-              stream.onEnd(() => {
-                setSpeech(false);
-                // recordAudio();
+              stream.onEnd(async () => {
+                if (client.current) {
+                  // recordAudio();
+                }
               });
+            })
+            .catch((error) => {
+              console.log(error);
             });
+        })
+        .catch((error) => {
+          console.log(error);
         });
-    }, 180);
-  });
+      setSpeech(false);
+    }
+  };
 
   const startRecord = async () => {
     if (client.current === '') {
@@ -135,22 +110,20 @@ const App = () => {
         console.log(error);
       });
     }
+    setSpeech(true);
     recordAudio();
   };
 
   const stopRecord = () => {
     if (client.current !== '') {
-      AudioRecord.stop();
-      console.log('stoping');
       setSpeech(false);
-
-      setTimeout(() => {
-        client.current.on('close', () => {
-          console.log('Connection closed!');
-        });
-        client.current.destroy();
-        client.current = '';
-      }, 5000);
+      console.log('stoping');
+      AudioRecord.stop();
+      client.current.on('close', () => {
+        console.log('Connection closed!');
+      });
+      client.current.destroy();
+      client.current = '';
     }
   };
 
@@ -191,13 +164,15 @@ const App = () => {
         <Text>{textRef.current}</Text>
       </View>
       <View style={styles.buttonView}>
-        <Button
-          onPress={requestRecord}
-          title="Start Recording"
-          color="#841584"
-          accessibilityLabel="Learn more about this purple button"
-          style={styles.button}
-        />
+        <TouchableOpacity
+          style={styles.FacebookStyle}
+          activeOpacity={0.5}
+          onPress={requestRecord}>
+          <Image source={require('./mic.png')} style={styles.ImageIconStyle} />
+          <Text style={styles.TextStyle}>
+            {speech ? 'Recording' : 'Record'}
+          </Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.buttonView}>
         <Button
@@ -214,8 +189,8 @@ const App = () => {
 
 const styles = StyleSheet.create({
   buttonView: {
-    marginVertical: 20,
-    marginHorizontal: 40,
+    alignItems: 'center',
+    marginVertical: 30,
   },
   button: {
     marginBottom: 20,
@@ -224,7 +199,11 @@ const styles = StyleSheet.create({
     margin: 20,
     padding: 10,
     borderWidth: 2,
-    height: 200,
+    height: 250,
+  },
+  ImageIconStyle: {
+    height: 50,
+    width: 50,
   },
 });
 
