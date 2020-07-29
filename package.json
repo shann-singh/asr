@@ -18,6 +18,7 @@
     "react-native-permissions": "^2.1.5",
     "react-native-sound-level": "^1.1.5",
     "react-native-tcp-socket": "^4.2.0",
+    "react-native-workers": "^0.3.1",
     "rn-fetch-blob": "^0.12.0"
   },
   "devDependencies": {
