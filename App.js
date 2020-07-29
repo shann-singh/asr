@@ -2,9 +2,7 @@ import React, {useState, useEffect, useRef} from 'react';
 import {StyleSheet, Button, Platform, View, Text} from 'react-native';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import TcpSocket from 'react-native-tcp-socket';
-import {RNFFmpeg, RNFFmpegConfig} from 'react-native-ffmpeg';
 import {Player, Recorder} from '@react-native-community/audio-toolkit';
-import RNSoundLevel from 'react-native-sound-level';
 import RNFetchBlob from 'rn-fetch-blob';
 import AudioRecord from 'react-native-audio-record';
 import {Buffer} from 'buffer';
@@ -13,10 +11,7 @@ const App = () => {
   const [speech, setSpeech] = useState(false);
   const [text, setText] = useState('');
   const client = useRef('');
-  const prevTextRef = useRef();
   const textRef = useRef('');
-
-  RNFFmpegConfig.disableLogs();
 
   const options = {
     sampleRate: 8000, // default 44100
@@ -28,28 +23,28 @@ const App = () => {
 
   AudioRecord.init(options);
 
-  // useEffect(() => {
-  //   if (client.current !== '') {
-  //     client.current.on('data', async (data) => {
-  //       console.log(data);
-  //       let d = await data.toString('utf8');
-  //       console.log(d);
-  //       if (prevTextRef.current !== d && d !== ' ') {
-  //         textRef.current = prevTextRef.current + d;
-  //         prevTextRef.current = d;
-  //         setText(text + ' ' + d);
-  //         if (d.search('stop') !== -1) {
-  //           stopRecord();
-  //         }
-  //       } else {
-  //         setSpeech(true);
-  //       }
-  //     });
-  //     return () => {
-  //       setSpeech(true);
-  //     };
-  //   }
-  // }, [speech, text]);
+  useEffect(() => {
+    if (client.current !== '') {
+      client.current.on('data', async (data) => {
+        console.log(data);
+        let d = await data.toString('utf8');
+        console.log(d);
+        if (prevTextRef.current !== d && d !== ' ') {
+          textRef.current = prevTextRef.current + d;
+          prevTextRef.current = d;
+          setText(text + ' ' + d);
+          if (d.search('stop') !== -1) {
+            stopRecord();
+          }
+        } else {
+          setSpeech(true);
+        }
+      });
+      return () => {
+        setSpeech(true);
+      };
+    }
+  }, [speech, text]);
 
   const recordAudio = () => {
     setSpeech(true);
